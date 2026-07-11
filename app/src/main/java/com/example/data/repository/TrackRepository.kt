@@ -153,12 +153,17 @@ class TrackRepository(private val trackDao: TrackDao) {
         while (candidatesPool.isEmpty() && fetchAttempts < 3) {
             val unplayedCount = dbMatches.count { it.id !in playedTrackIds && it.id != currentTrackId }
             if (unplayedCount < 10) {
-                Log.d(TAG, "Few local matches ($unplayedCount). Fetching from Archive.org with active filters (attempt ${fetchAttempts+1}/3)...")
+                Log.d(TAG, "Few local matches ($unplayedCount). Fetching from Archive.org (attempt ${fetchAttempts+1}/3)...")
                 try {
+                    // Pass first genre (if any) to online search
+                    val primaryGenre = cleanGenre?.split("|")?.firstOrNull()
+                    val primaryStyle = cleanStyle?.split("|")?.firstOrNull()
+                    val primaryRegion = cleanRegion?.split("|")?.firstOrNull()
+                    
                     val onlineTracks = ArchiveApiClient.searchTracks(
-                        genre = cleanGenre,
-                        style = cleanStyle,
-                        region = cleanRegion,
+                        genre = primaryGenre,
+                        style = primaryStyle,
+                        region = primaryRegion,
                         tagText = tagText,
                         onlyTopicChannels = onlyTopicChannels,
                         minYear = cleanMinYear,
@@ -235,43 +240,24 @@ class TrackRepository(private val trackDao: TrackDao) {
                 }
             }
 
-            // 3. RELEVANCE RANKING & SCORING: Grade and rank local candidate tracks
-            val unplayedMatches = dbMatches.filter { it.id !in playedTrackIds && it.id != currentTrackId }
-            val scoredMatches = unplayedMatches.map { track ->
-                val score = ArchiveApiClient.calculateRelevanceScore(
-                    track = track,
-                    rawDescription = null,
-                    searchGenre = cleanGenre,
-                    searchStyle = cleanStyle,
-                    searchRegion = cleanRegion,
-                    searchTags = tagText
-                )
-                Pair(track, score)
-            }.filter { it.second > 0 } // Discard negative/disqualified matches
+            // 3. PRIORITIZATION: Already-Indexed vs Unindexed candidates
+            val perfectMatches = dbMatches.filter { track ->
+                val matchesKey = cleanKey == null || (track.musicKey != null && cleanKey.split("|").any { it.equals(track.musicKey, ignoreCase = true) })
+                val matchesMinBpm = cleanMinBpm == null || (track.bpm != null && track.bpm!! >= cleanMinBpm)
+                val matchesMaxBpm = cleanMaxBpm == null || (track.bpm != null && track.bpm!! <= cleanMaxBpm)
+                val matchesMinYear = cleanMinYear == null || (track.year != null && track.year!! >= cleanMinYear)
+                val matchesMaxYear = cleanMaxYear == null || (track.year != null && track.year!! <= cleanMaxYear)
+                
+                track.isIndexed && matchesKey && matchesMinBpm && matchesMaxBpm && matchesMinYear && matchesMaxYear
+            }
 
-            val sortedUnplayed = scoredMatches.sortedByDescending { it.second }.map { it.first }
+            val unplayedPerfect = perfectMatches.filter { it.id !in playedTrackIds && it.id != currentTrackId }.shuffled()
+            val unindexed = dbMatches.filter { !it.isIndexed && it.id != currentTrackId }
+            val unplayedUnindexed = unindexed.filter { it.id !in playedTrackIds }.shuffled()
 
             candidatesPool.clear()
-            // To balance high relevance with digging variety, we take the top 8 candidates and shuffle them
-            candidatesPool.addAll(sortedUnplayed.take(8).shuffled())
-
-            // Fallback: If no unplayed highly relevant tracks left, reuse played ones to prevent dead ends
-            if (candidatesPool.isEmpty()) {
-                val playedMatches = dbMatches.filter { it.id != currentTrackId }
-                val scoredPlayed = playedMatches.map { track ->
-                    val score = ArchiveApiClient.calculateRelevanceScore(
-                        track = track,
-                        rawDescription = null,
-                        searchGenre = cleanGenre,
-                        searchStyle = cleanStyle,
-                        searchRegion = cleanRegion,
-                        searchTags = tagText
-                    )
-                    Pair(track, score)
-                }.filter { it.second > 0 }
-                val sortedPlayed = scoredPlayed.sortedByDescending { it.second }.map { it.first }
-                candidatesPool.addAll(sortedPlayed.take(8).shuffled())
-            }
+            candidatesPool.addAll(unplayedPerfect)
+            candidatesPool.addAll(unplayedUnindexed)
 
             if (candidatesPool.isNotEmpty() || unplayedCount >= 10) {
                 break
@@ -280,7 +266,7 @@ class TrackRepository(private val trackDao: TrackDao) {
         }
 
         if (candidatesPool.isEmpty()) {
-            Log.w(TAG, "No more tracks matching the criteria.")
+            Log.w(TAG, "No more unplayed tracks matching the criteria.")
             return null
         }
 
