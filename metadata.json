@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Remix: Remix: Сэмпл Диггер",
+  "description": "Приложение для поиска сэмплов и диггинга музыки с использованием Archive.org, локальной базы данных, анализа треков в реальном времени, визуализации винилового проигрывателя и гибкой системы фильтров поиска.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
