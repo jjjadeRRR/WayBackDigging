@@ -1,21 +1,40 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# 🎧 WayBackDigging
 
-# Run and deploy your AI Studio app
+**WayBackDigging** — это Android-приложение, созданное для ленивого и быстрого поиска музыкальных сэмплов, брейкбитов и атмосферных текстур напрямую из огромных архивов [archive.org](https://archive.org/). Удобный инструмент для битмейкеров, продюсеров и всех, кто ищет грязный, олдскульный звук по конкретным параметрам.
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/f71ad729-e8c7-4a2e-9d83-bbf9bafe8b8e
+## ⚠️ ВАЖНОЕ ПРЕДУПРЕЖДЕНИЕ (ДИСКЛЕЙМЕР)
 
-## Run Locally
+> **Проект полностью навайбкожен внутри Google AI Studio.** > Код генерировался нейросетью, поэтому под капотом может твориться полная анархия, а архитектурные решения могут заставить плакать опытных Android-разработчиков.
+> 
+> 🛑 **Текущие проблемы с фильтрацией:** На данный момент фильтры по жанрам, BPM и тональностям могут работать некорректно или выдавать неожиданные результаты. Парсинг находится в экспериментальном состоянии. Используйте на свой страх и риск (и ради весёлого диггинга!).
 
-**Prerequisites:**  [Android Studio](https://developer.android.com/studio)
+---
 
+## ✨ Что реализовано в текущей версии
 
-1. Open Android Studio
-2. Select **Open** and choose the directory containing this project
-3. Allow Android Studio to fix any incompatibilities as it imports the project.
-4. Create a file named `.env` in the project directory and set `GEMINI_API_KEY` in that file to your Gemini API key (see `.env.example` for an example)
-5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
-6. Run the app on an emulator or physical device
+* 🔍 **Парсинг архива:** Поиск аудиоматериалов напрямую из базы Internet Archive без необходимости качать гигабайты мусора вручную.
+* 🎵 **Виниловый плеер:** Кастомный интерактивный интерфейс воспроизведения с плавными анимациями и аудио-реактивным градиентом.
+* 📱 **Плавный UI:** Бесшовные переходы между экранами (Инфо, Плеер, История) с использованием `Shared Elements` и приятным тактильным откликом (вибрацией) при взаимодействии.
+* 🏷️ **Просмотр метаданных:** Отображение доступных тегов, авторов и описания для каждого найденного трека/сэмпла.
+
+---
+
+## 🚀 Установка
+
+1. Перейдите в раздел **[Releases](https://github.com/YOUR_USERNAME/WayBackDigging-main/releases)** на этой странице.
+2. Скачайте актуальный файл `apk-release.apk` (или `WayBackDigging-v1.0.0.apk`).
+3. Закиньте на свой Android-смартфон и установите.
+   * *Примечание: при первой установке Android может попросить разрешить установку из внешних источников (для вашего браузера или проводника) — это нормально.*
+
+---
+
+## 🛠️ Особенности сборки (Для разработчиков)
+
+Если вы захотите собрать проект локально из исходников, учтите важный нюанс шаблонов Google AI Studio:
+
+1. **Версия SDK:** Проект настроен под современный Android 16 (compileSdk / targetSdk 36).
+2. **Исправление подписи (Build Error):** Перед сборкой обязательно откройте файл `app/build.gradle.kts` и закомментируйте/удалите строку настройки debug-подписи в блоке `buildTypes -> debug`:
+   ```kotlin
+   // signingConfig = signingConfigs.getByName("debugConfig")
